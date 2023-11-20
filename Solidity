@@ -1,0 +1,213 @@
+#CHARACTER STUFFING
+
+clc
+close all
+clear all
+disp('Framing Method is Character Stuffing ')
+plain_text = input('Enter Plain Text: ','s');
+interval = input('Enter the Interval length: ');
+insert_string=input('Enter the character to be inserted: ','s');
+lpt=length(plain_text);
+remainder = rem(lpt,interval);
+encrypted_text='';
+for i=1:interval:lpt-interval+1
+encrypted_text=[encrypted_text,plain_text(1,i:i+interval-1),insert_string];
+end
+if remainder~=0
+encrypted_text=[encrypted_text,plain_text(1,end-remainder+1:end),insert_string]
+end
+disp('The Encrypted Text is')
+disp(encrypted_text)
+decrypted_text='';
+lis=length(insert_string);
+let=length(encrypted_text);
+for j=1:interval+lis:let
+if j+interval+lis>let
+decrypted_text=[decrypted_text,encrypted_text(1,j:end-lis)];
+else
+decrypted_text=[decrypted_text,encrypted_text(1,j:j+interval-1)];
+end
+end
+disp('The Decrypted text is')
+disp(decrypted_text)
+-----------------------------------------------------------------------------------------------------------
+#BIT STUFFING
+
+clc
+close all
+clear all
+msg = input('Input Message Binary Bit Stream: ');
+count = 1;
+stuffcount =0;
+[M N]=size(msg);
+for j=1:N-5+stuffcount
+for i=j:j+5
+if msg(i)==1
+count=count+1;
+else
+count=0;
+break;
+end
+end
+if count==6
+msg=[msg(1:j+4) 0 msg(j+5:end)];
+count=0;
+stuffcount=stuffcount+1;
+end
+end
+fprintf('Stream after the bit is stuffed: ');
+disp(msg);
+---------------------------------------------------------------------------------------------------------
+#STOP AND WAIT WINDOW
+
+#creation of NS2 simulator object
+set ns [new Simulator]
+#open trace file
+settf [open stop&wait.tr w]
+$ns trace-all $tf
+#open NAM file
+setnf [open stop&wait.nam w]
+$ns namtrace-all $nf
+#definecolor 'blue (eexmp: blue, red, yellow, etc)
+$ns color 1 Blue
+#define a 'finish' procedure
+proc finish {} {
+global ns tfnf
+$ns flush-trace
+close $tf
+close $nf
+execnamstop&wait.nam&
+exit 0
+}
+#create two nodes with labels
+set n0 [$ns node]
+$n0 label "Transmitter"
+set n1 [$ns node]
+$n1 label "Receiver"
+#create a duplex link between the nodes
+$ns duplex-link $n0 $n1 1Mb 100ms DropTail
+#define orientation of the links between the nodes
+$ns duplex-link-op $n0 $n1 orient right
+#create a TCP agent for node 'n0'
+set tcp0 [new Agent/TCP]
+$tcp0 set window_ 1
+$tcp0 set fid_ 1
+$ns attach-agent $n0 $tcp0
+#create ftp traffic source for tcp agent 'tcp0'
+set ftp0 [new Application/FTP]
+$ftp0 attach-agent $tcp0
+#create null agent for node n2
+set sink0 [new Agent/TCPSink]
+$ns attach-agent $n1 $sink0
+#connect the traffic source to the traffic sink0
+$ns connect $tcp0 $sink0
+#define event schedules
+$ns at 0.2 "$ftp0 start"
+$ns at 2.5 "$ftp0 stop"
+#call the finish procedure after 5 seconds of simulation time
+$ns at 2.75 "finish"
+#run the simulation
+$ns run
+---------------------------------------------------------------------------------------------------
+#Sliding Window Protocol
+#creation of the ns simulator object
+set ns [new Simulator]
+$ns color 1 Blue
+set nf [open sliding.nam w]
+$ns namtrace-all $nf
+#open trace file
+set tf [open sliding.tr w]
+$ns trace-all $tf
+proc finish {} {
+global ns nf tf
+$ns flush-trace
+#close the trace file
+close $nf
+close $tf
+#execution on the trace file
+exec nam sliding.nam &
+exit 0
+}
+set n0 [$ns node]
+$n0 label "Transmitter"
+set n1 [$ns node]
+$n1 label "Receiver"
+#create a duplex link between the nodes
+$ns duplex-link $n0 $n1 1Mb 100ms DropTail
+#define orientation of the links between the nodes
+$ns duplex-link-op $n0 $n1 orient right
+#create a TCP agent for node "n0"
+set tcp0 [new Agent/TCP]
+$tcp0 set window_ 9
+$tcp0 set fid_ 1
+$ns attach-agent $n0 $tcp0
+#create FTP traffic source for TCP agent 'tcp0'
+set ftp0 [new Application/FTP]
+$ftp0 attach-agent $tcp0
+#create a TCP sink agent for node n1
+set sink0 [new Agent/TCPSink]
+$ns attach-agent $n1 $sink0
+#connect tcp(n0) with sink(n1)
+$ns connect $tcp0 $sink0
+#define event schedules
+$ns at 0.2 "$ftp0 start"
+$ns at 2.5 "$ftp0 stop"
+#call the finish procedure after 5 seconds of simulation time
+$ns at 2.75 "finish"
+$ns run
+------------------------------------------------------------------------------------------------
+#mesh protocol
+
+#create a siulator object
+set ns [new Simulator]
+set a 5
+#define different colors for data flows(for NAM)
+$ns color 1 Red
+#open the nam trace file
+set nf [open mesh.nam w]
+$ns namtrace-all $nf
+#open trace file
+set tf [open mesh.tr w]
+$ns trace-all $tf
+proc finish {} {
+global ns nf tf
+$ns flush-trace
+#close the trace file
+close $nf
+close $tf
+#execution on the trace file
+exec nam mesh.nam &
+exit 0
+}
+#create 10 nodes using for loop
+for {set i 0} {$i<$a} {incr i 1} {
+set n($i) [$ns node]
+}
+#create links between the nodes.
+for {set i 0} {$i<[expr $a-1]} {incr i} {
+for {set j [expr $i+1]} {$j<$a} {incr j} {
+$ns duplex-link $n($i) $n($j) 1Mb 20ms DropTail
+}
+}
+$ns queue-limit $n(0) $n(1) 500
+$ns duplex-link-op $n(0) $n(1) queuePos 0.25
+$ns duplex-link-op $n(0) $n([expr ($a - 1)]) queuePos 0.25
+#Creat a UDP agent and attach it to node 0
+set udp0 [new Agent/UDP]
+$ns attach-agent $n(0) $udp0
+set null0 [new Agent/Null]
+$ns attach-agent $n(3) $null0
+#connect n0 and n3 via udp.
+$ns connect $udp0 $null0
+set cbr1 [new Application/Traffic/CBR]
+$cbr1 set packetSize_ 1024
+$cbr1 set interval_ 0.05
+$cbr1 attach-agent $udp0
+#schedule events for the CBR agents
+$ns at 0.01 "$cbr1 start"
+$ns at 1.75 "$cbr1 stop"
+#call the finish procedure after 5 sconds of simulation time
+$ns at 2.0 "finish"
+#run the simulation
+$ns run
+---------------------------------------------------------------------------------------
