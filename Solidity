@@ -211,3 +211,217 @@ $ns at 2.0 "finish"
 #run the simulation
 $ns run
 ---------------------------------------------------------------------------------------
+#ring protocols
+
+#create a siulator object
+set ns [new Simulator]
+set a 10
+#define different colors for data flows(for NAM)
+$ns color 1 Red
+#open the nam trace file
+set nf [open ring.nam w]
+$ns namtrace-all $nf
+#open trace file 
+set tf [open ring.tr w]
+$ns trace-all $tf
+proc finish {} {
+global ns nf tf
+$ns flush-trace
+#close the trace file
+close $nf
+close $tf
+#execution on the trace file
+exec nam ring.nam &
+exit 0
+}
+#create 10 nodes using for loop
+for {set i 0} {$i<$a} {incr i 1} {
+set n($i) [$ns node]
+}
+#create links between the nodes.
+for {set i 0} {$i<$a} {incr i} {
+$ns duplex-link $n($i) $n([expr ($i+1)%{$a}]) 1Mb 20ms DropTail
+}
+$ns queue-limit $n(0) $n(1) 500
+$ns duplex-link-op $n(0) $n(1) queuePos 0.25
+$ns duplex-link-op $n(0) $n([expr ($a - 1)]) queuePos 0.25
+#Creat a UDP agent and attach it to node 0
+set udp0 [new Agent/UDP]
+$ns attach-agent $n(0) $udp0
+set null0 [new Agent/Null]
+$ns attach-agent $n(3) $null0
+#connect n0 and n3 via udp.
+$ns connect $udp0 $null0
+$udp0 set fid_ 1
+set cbr1 [new Application/Traffic/CBR]
+$cbr1 set packetSize_ 1024
+$cbr1 set interval_ 0.05
+$cbr1 attach-agent $udp0
+#schedule events for the CBR agents
+$ns at 0.01 "$cbr1 start"
+$ns at 1.75 "$cbr1 stop"
+#call the finish procedure after 5 sconds of simulation time
+$ns at 2.0 "finish"
+#run the simulation
+$ns run
+------------------------------------------------------------------------------------------
+#bus protocol
+
+#create a simulator object
+set ns [new Simulator]
+#define different colors for data flow (for NAM)
+$ns color 1 Red
+$ns color 2 Green
+#open the nam trace file
+set nf [open bus.nam w]
+$ns namtrace-all $nf
+#open trace file
+set tf [open bus.tr w]
+$ns trace-all $tf
+proc finish {} {
+global ns nf tf
+$ns flush-trace
+#close the trace file
+close $nf
+close $tf
+#executenam on the trace file
+exec nam bus.nam &
+exit 0
+}
+#create five nodes
+set n0 [$ns node]
+set n1 [$ns node]
+set n2 [$ns node]
+set n3 [$ns node]
+set n4 [$ns node]
+#create LAN between the nodes.
+set lan0 [$ns newLan "$n0 $n1 $n2 $n3 $n4" 1.5Mb 40ms LL Queue/DropTail MAC/Csma/Cd Channel]
+#Creat a TCP agent and attach it to node n1
+set tcp0 [new Agent/TCP]
+$tcp0 set fid_ 1
+$ns attach-agent $n1 $tcp0
+#create a TCP Sink agent {a traffic sink) for TCP and attach it to sink0
+set sink0 [new Agent/TCPSink]
+$ns attach-agent $n3 $sink0
+#connect the traffic sources with the traffic sink
+$ns connect $tcp0 $sink0
+#setup a FTP over TCP connection
+set ftp3 [new Application/FTP]
+$ftp3 attach-agent $tcp0
+$ftp3 set type_ FTP
+#setup UDP connection for n2 and n4
+set udp4 [new Agent/UDP]
+$ns attach-agent $n2 $udp4
+set null3 [new Agent/Null]
+$ns attach-agent $n4 $null3
+#connect n2 and n4 via udp.
+$ns connect $udp4 $null3
+$udp4 set fid_ 2
+set cbr1 [new Application/Traffic/CBR]
+$cbr1 set packetSize_ 1024
+$cbr1 set interval_ 0.05
+$cbr1 attach-agent $udp4
+#schedule events for the CBR agents
+$ns at 0.5 "$ftp3 start"
+$ns at 4.0 "$ftp3 stop"
+$ns at 1.5 "$cbr1 start"
+#call the finish procedure after 5 sconds of simulation time
+$ns at 5.0 "finish"
+#run the simulation
+$ns run
+------------------------------------------------------------------------------------------------------------------
+#duplex link between two nodes.
+
+# creation of the ns2 simulator object
+set ns [new Simulator]
+#open trace file
+set tf [open exp1.tr w]
+#writes the simulation data to the output file.
+$ns trace-all $tf
+#open NAM file
+set nf [open exp1.nam w]
+$ns namtrace-all $nf
+#define the finish procedure
+proc finish {} {
+#this proc execute the nam file only!
+global ns tf nf
+#embedded simulation data to output file.
+$ns flush-trace
+close $tf
+close $nf
+#execute the nam file.
+exec nam exp1.nam &
+exit 0
+}
+#create a node aong with labelsset n0 [$ns node]
+set n1 [$ns node]
+#create a duplex link between the two nodes, link speed and delay.
+$ns duplex-link $n0 $n1 1Mb 10ms DropTail
+#create a UDP agent and attach it to node n0
+set udp0 [new Agent/UDP]
+$ns attach-agent $n0 $udp0
+#create null agent for node n0
+set null0 [new Agent/Null]
+$ns attach-agent $n1 $null0
+#connect node n0 and node n1 (source and sink) filehandle variables of source and sink agent
+$ns connect $udp0 $null0
+#define traffic model for source agent. like what speed and size of the packet.
+set cbr0 [new Application/Traffic/CBR]
+$cbr0 set interval_ 0.005
+$cbr0 attach-agent $udp0
+#this packet transfer rate should be less than link rate between two nodes.
+#define the event schedules. at what time source stops the transmission.
+$ns at 0.5 "$cbr0 start"
+$ns at 1.5 "$cbr0 stop"
+#take these start and stop times less than the simulation time i.e., 2.0
+#call the finish procedure after 5 seconds of the simulation time
+$ns at 2.0 "finish"
+#run the simulation
+$ns run
+#this portion is common for all the programs.
+#this creates empty name
+----------------------------------------------------------------------------
+#Armstrong number or not.
+
+puts "Enter the number N to know whether it is Armstrong Number or Not"
+gets stdin Number
+set i $Number
+proc Armstrong {i} {
+set n $i
+set sum 0
+set l [string length $i]
+puts "The Number of digits in $i are $l"
+while {$n>0} {
+set rem [expr $n%10]
+set powerl [expr pow($rem,$l)]
+set sum [expr $sum + $powerl]
+set n [expr $n/10]
+}
+if {$i==$sum} {
+puts "$i is an Armstrong Number"
+} else {
+puts "$i is Not an Armstrong Number"
+}
+}
+Armstrong $i
+-----------------------------------------------------------------------------
+#Prime or not
+puts "Enter the number N to know whether it is Prime Number or Not"
+gets stdin Number
+set i $Number
+proc prime {i} {
+set a 0
+for {set j 2} {$j < [expr $i/2]} {incr j 1} {
+set rem [expr fmod($i,$j)]
+if {$rem ==0} {
+set a 1
+break }
+}
+if {$a ==1} {
+puts "$i is not a prime number"
+} else {
+puts "$i is a prime number"
+}
+}
+prime $i
+----------------------------------------------------------------------------------
